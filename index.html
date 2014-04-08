@@ -1,0 +1,282 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Conway's Game of Life | Ryan Jackson</title>
+		<script type="text/javascript">
+			while(gridWidth === undefined || isNaN(gridWidth) || gridWidth < 5 || gridWidth > 50)
+			{
+				var gridWidth = parseInt(window.prompt("Please enter the width of the grid (5-50).", "50"), 10);
+			}
+			while(gridHeight === undefined || isNaN(gridHeight) || gridHeight < 5 || gridHeight > 50)
+			{
+				var gridHeight = parseInt(window.prompt("Please enter the height of the grid (5-50).", "50"), 10);
+			}
+			while(true)
+			{
+				var lifeRules = window.prompt("Please enter the rules for life.", "23/3");
+				var fail = false;
+				var foundSlash = false;
+				var survive = new Array(9);
+				var thrive = new Array(9);
+				for(var i = 0; i < 9; i++)
+				{
+					survive[i] = false;
+					thrive[i] = false;
+				}
+				for(var i = 0; i < lifeRules.length; i++)
+				{
+					var char = lifeRules.charAt(i);
+					var parsedChar = parseInt(char, 10);
+					if(isNaN(parsedChar))
+					{
+						if(char == "/" && !foundSlash)
+						{
+							foundSlash = true;
+							continue;
+						}
+						else
+						{
+							fail = true;
+							break;
+						}
+					}
+					else if(char == 9)
+					{
+						fail = true;
+						break;
+					}
+					else
+					{
+						if(foundSlash)
+						{
+							if(thrive[parsedChar])
+							{
+								fail = true;
+								break;
+							}
+							else
+							{
+								thrive[parsedChar] = true;
+								continue;
+							}
+						}
+						else
+						{
+							if(survive[parsedChar])
+							{
+								fail = true;
+								break;
+							}
+							else
+							{
+								survive[parsedChar] = true;
+								continue;
+							}
+						}
+					}
+				}
+				if(!fail)
+				{
+					break;
+				}
+			}
+			var gridWidthPx = 10 * gridWidth;
+			var gridHeightPx = 10 * gridHeight;
+			var currentGrid = new Array(gridWidth);
+			var newGrid = new Array(gridWidth);
+			for(var x = -1; x <= gridWidth; x++)
+			{
+				currentGrid[x] = new Array(gridHeight);
+				newGrid[x] = new Array(gridHeight);
+				for(var y = -1; y <= gridHeight; y++)
+				{
+					currentGrid[x][y] = false;
+					newGrid[x][y] = false;
+				}
+			}
+			var timerID;
+			var xCoord;
+			var yCoord;
+			var mouseDown = false;
+			var tickTime = 500;
+			var running = false;
+			var creating;
+			var generationNum = 0;
+			function drawGrid()
+			{
+				canvasContext.strokeStyle = "rgb(100, 100, 100)";
+				canvasContext.lineWidth = 1;
+				canvasContext.beginPath();
+				for(var x = 0; x <= gridWidthPx; x += 10)
+				{
+					canvasContext.moveTo(x, 0);
+					canvasContext.lineTo(x, gridHeightPx);
+				}
+				for(var y = 0; y <= gridHeightPx; y += 10)
+				{
+					canvasContext.moveTo(0, y);
+					canvasContext.lineTo(gridWidthPx, y);
+				}
+				canvasContext.stroke();
+			}
+			function fillSquare(x, y)
+			{
+				canvasContext.fillStyle = "rgb(0, 0, 0)";
+				canvasContext.fillRect(x * 10 + 1, y * 10 + 1, 8.5, 8.5);
+				currentGrid[x][y] = true;
+			}
+			function clearSquare(x, y)
+			{
+				canvasContext.fillStyle = "rgb(255, 255, 255)";
+				canvasContext.fillRect(x * 10 + 1, y * 10 + 1, 8.5, 8.5);
+				currentGrid[x][y] = false;
+			}
+			function startLife()
+			{
+				startBtn.disabled = true;
+				stopBtn.disabled = false;
+				timerID = setInterval("tick();", tickTime);
+				running = true;
+			}
+			function stopLife()
+			{
+				startBtn.disabled = false;
+				stopBtn.disabled = true;
+				clearInterval(timerID);
+				running = false;
+			}
+			function clearLife()
+			{
+				for(var x = 0; x < gridWidth; x++)
+				{
+					for(var y = 0; y < gridHeight; y++)
+					{
+						currentGrid[x][y] = false;
+					}
+				}
+				canvasContext.clearRect(0, 0, gridWidthPx, gridHeightPx);
+				drawGrid();
+				clearInterval(timerID);
+				startBtn.disabled = false;
+				stopBtn.disabled = true;
+				running = false;
+				generationNum = 0;
+				genCounter.innerHTML = generationNum;
+			}
+			function tick()
+			{
+				for(var x = 0; x < gridWidth; x++)
+				{
+					for(var y = 0; y < gridHeight; y++)
+					{
+						var numNeighbours = currentGrid[x - 1][y - 1] + currentGrid[x][y - 1] + currentGrid[x + 1][y - 1] + currentGrid[x + 1][y] + currentGrid[x + 1][y + 1] + currentGrid[x][y + 1] + currentGrid[x - 1][y + 1] + currentGrid[x - 1][y];
+						newGrid[x][y] = (currentGrid[x][y] && survive[numNeighbours]) || (!currentGrid[x][y] && thrive[numNeighbours]);
+					}
+				}
+				for(var x = 0; x < gridWidth; x++)
+				{
+					for(var y = 0; y < gridHeight; y++)
+					{
+						if(newGrid[x][y] && !currentGrid[x][y])
+						{
+							fillSquare(x, y);
+						}
+						else if(!newGrid[x][y] && currentGrid[x][y])
+						{
+							clearSquare(x, y);
+						}
+						currentGrid[x][y] = newGrid[x][y];
+					}
+				}
+				generationNum++;
+				genCounter.innerHTML = generationNum;
+			}
+			function onMouseDownCanvas(event)
+			{
+				mouseDown = true;
+				xCoord = Math.floor((event.pageX - 9) / 10);
+				yCoord = Math.floor((event.pageY - 49) / 10);
+				if(xCoord < 0 || yCoord < 0 || xCoord == gridWidth || yCoord == gridHeight)
+				{
+					return;
+				}
+				if(currentGrid[xCoord][yCoord])
+				{
+					clearSquare(xCoord, yCoord);
+					creating = false;
+				}	
+				else
+				{
+					fillSquare(xCoord, yCoord);
+					creating = true;
+				}
+			}
+			function onMouseUpCanvas(event)
+			{
+				mouseDown = false;
+			}
+			function onMouseMoveCanvas(event)
+			{
+				if(mouseDown)
+				{
+					var oldXCoord = xCoord;
+					var oldYCoord = yCoord;
+					xCoord = Math.floor((event.pageX - 9) / 10);
+					yCoord = Math.floor((event.pageY - 49) / 10);
+					if((xCoord == oldXCoord && yCoord == oldYCoord) || xCoord < 0 || yCoord < 0 || xCoord == gridWidth || yCoord == gridHeight)
+					{
+						return;
+					}
+					if(creating)
+					{
+						if(!currentGrid[xCoord][yCoord])
+						{
+							fillSquare(xCoord, yCoord);
+						}
+					}	
+					else
+					{
+						if(currentGrid[xCoord][yCoord])
+						{
+							clearSquare(xCoord, yCoord);
+						}
+					}
+				}
+			}
+			function changeTick()
+			{
+				var newTick = parseInt(tickTimeBox.value, 10);
+				if(isNaN(newTick) || newTick < 100 || newTick > 5000)
+				{
+					window.alert("Please enter a number between 100 and 5000.");
+					return;
+				}
+				tickTime = newTick;
+				tickTimeBox.value = tickTime;
+				if(running)
+				{
+					clearInterval(timerID);
+					timerID = setInterval("tick();", tickTime);
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<form onSubmit="return false;">
+			<input id="StartBtn" type="button" value="Start" onClick="startLife();"> <input id="StopBtn" type="button" value="Stop" onClick="stopLife();" disabled="true"> <input id="ClearBtn" type="button" value="Clear" onClick="clearLife();"> | Tick Time (MS): <input id="TickTime" type="text" value="500" size="3"> <input id="ChangeBtn" type="button" value="Change" onClick="changeTick();"> | Generation: <span id="GenerationNum">0</span>
+		</form>
+		<canvas id="Canvas" style="border: 0.5px solid #646464;" onMouseDown="onMouseDownCanvas(event);" onMouseUp="onMouseUpCanvas(event);" onMouseMove="onMouseMoveCanvas(event);"></canvas>
+		<script type="application/x-javascript">
+			var canvasElement = document.getElementById("Canvas");
+			canvasElement.width = gridWidthPx;
+			canvasElement.height = gridHeightPx;
+			var canvasContext = canvasElement.getContext("2d");
+			var startBtn = document.getElementById("StartBtn");
+			var stopBtn = document.getElementById("StopBtn");
+			var tickTimeBox = document.getElementById("TickTime");
+			tickTimeBox.value = tickTime;
+			var genCounter = document.getElementById("GenerationNum");
+			drawGrid();
+		</script>
+	</body>
+</html>
